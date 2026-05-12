@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Starter Monsters: Prologue (5 min)</title>
+  <style>
+    :root{--bg:#0b1020;--panel:#111833;--panel2:#0f1630;--text:#e7ecff;--muted:#aab4e6;--accent:#7cf0c7;--danger:#ff6b6b}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#070a14,#0b1020 45%,#070a14);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    .wrap{max-width:980px;margin:0 auto;padding:16px;display:grid;gap:12px;grid-template-columns:1fr;}
+    .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    h1{font-size:18px;margin:0;letter-spacing:.2px}
+    .sub{color:var(--muted);font-size:13px;margin-top:4px;max-width:720px}
+    .card{background:rgba(17,24,51,.72);border:1px solid rgba(255,255,255,.08);border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.35);padding:12px;}
+    .row{display:grid;gap:12px;grid-template-columns: 1fr;}
+    @media(min-width:900px){.row{grid-template-columns: 1.25fr .75fr;}}
+    canvas{width:100%;height:auto;image-rendering: pixelated; border-radius:14px; background: #0a0f22; border:1px solid rgba(255,255,255,.08)}
+    .hud{display:grid;gap:10px}
+    .kbd{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .key{border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.15);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    .key b{color:var(--text)}
+    .btns{display:grid;gap:10px}
+    .pad{display:grid;grid-template-columns:48px 48px 48px;grid-template-rows:48px 48px 48px;gap:8px;justify-content:start}
+    button{cursor:pointer;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.05));color:var(--text);padding:10px 12px;font-weight:600;box-shadow:0 8px 18px rgba(0,0,0,.25);}
+    button:active{transform:translateY(1px)}
+    .dpadbtn{width:48px;height:48px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .ab{display:flex;gap:10px;justify-content:flex-start;align-items:center;flex-wrap:wrap}
+    .ab button{width:84px}
+    .small{font-size:12px;color:var(--muted)}
+    .hr{height:1px;background:rgba(255,255,255,.08);margin:10px 0}
+    .list{display:grid;gap:10px}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:rgba(124,240,199,.08);border:1px solid rgba(124,240,199,.22);padding:8px 10px;border-radius:999px;color:var(--text);font-size:12px}
+    .pill span{color:var(--accent);font-weight:700}
+    .warn{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.22)}
+    .warn span{color:var(--danger)}
+    a{color:var(--accent)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Starter Monsters: Prologue (≈5 minutes)</h1>
+        <div class="sub">An original, retro monster-adventure prologue inspired by classic handheld RPGs (no Pokémon IP). Play through waking up, meeting your mentor’s message, choosing your first companion, and stepping outside.</div>
+      </div>
+      <div class="list">
+        <div class="pill"><span>Controls</span> Arrow keys = D‑pad, <b>Z</b>=A, <b>X</b>=B</div>
+        <div class="pill warn"><span>Note</span> This is an homage with original names, art, and story beats.</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <canvas id="game" width="512" height="384" aria-label="game"></canvas>
+        <div class="small" style="margin-top:8px">Tip: Click the game to focus, then use the keyboard. On mobile, use the on-screen buttons.</div>
+      </div>
+
+      <div class="card hud">
+        <div class="kbd">
+          <div class="key"><b>↑↓←→</b> Move</div>
+          <div class="key"><b>Z</b> A (confirm/talk)</div>
+          <div class="key"><b>X</b> B (back)</div>
+          <div class="key"><b>Shift</b> Hold to walk faster</div>
+        </div>
+        <div class="hr"></div>
+        <div class="btns">
+          <div class="pad" aria-label="dpad">
+            <div></div><button class="dpadbtn" data-btn="up">▲</button><div></div>
+            <button class="dpadbtn" data-btn="left">◀</button><button class="dpadbtn" data-btn="down">▼</button><button class="dpadbtn" data-btn="right">▶</button>
+            <div></div><div></div><div></div>
+          </div>
+          <div class="ab">
+            <button data-btn="a">A (Z)</button>
+            <button data-btn="b">B (X)</button>
+          </div>
+        </div>
+        <div class="hr"></div>
+        <div class="small">
+          <b>Goal:</b> Talk to Mom downstairs, read the mentor’s message, pick a starter creature, then exit the house.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // --- Simple retro engine (tile-based) ---
+  const TILE = 32;
+  const W = canvas.width;
+  const H = canvas.height;
+  const gridW = Math.floor(W / TILE);
+  const gridH = Math.floor(H / TILE);
+
+  const keys = new Set();
+  let focus = true;
+
+  canvas.addEventListener('pointerdown', () => { canvas.focus?.(); focus = true; });
+  window.addEventListener('blur', () => { focus = false; keys.clear(); });
+
+  // Map IDs
+  const MAP_BEDROOM = 0;
+  const MAP_DOWNSTAIRS = 1;
+  const MAP_OUTSIDE = 2;
+
+  // --- Maps: 0=walkable, 1=solid, 2=door ---
+  // Each map is gridH x gridW (12 x 16)
+  function make2D(fill=0){return Array.from({length:gridH},()=>Array.from({length:gridW},()=>fill));}
+
+  const maps = {
+    [MAP_BEDROOM]: make2D(0),
+    [MAP_DOWNSTAIRS]: make2D(0),
+    [MAP_OUTSIDE]: make2D(0),
+  };
+
+  // Bedroom layout
+  (function(){
+    const m = maps[MAP_BEDROOM];
+    // Walls
+    for(let y=0;y<gridH;y++){ for(let x=0;x<gridW;x++){
+      if(x===0||y===0||x===gridW-1||y===gridH-1) m[y][x]=1;
+    }}
+    // Bed (solid)
+    for(let y=2;y<=4;y++){ for(let x=2;x<=5;x++) m[y][x]=1; }
+    // Desk
+    for(let x=10;x<=13;x++) m[3][x]=1;
+    // Stairs/door to downstairs
+    m[gridH-2][gridW-3]=2;
+  })();
+
+  // Downstairs layout
+  (function(){
+    const m = maps[MAP_DOWNSTAIRS];
+    for(let y=0;y<gridH;y++){ for(let x=0;x<gridW;x++){
+      if(x===0||y===0||x===gridW-1||y===gridH-1) m[y][x]=1;
+    }}
+    // Kitchen counter
+    for(let x=2;x<=6;x++) m[2][x]=1;
+    // Table
+    for(let y=5;y<=6;y++) for(let x=3;x<=5;x++) m[y][x]=1;
+    // Starter crate area (3 pedestals) near right
+    for(let i=0;i<3;i++){ m[4+i*2][12]=1; m[4+i*2][13]=1; }
+    // Front door to outside
+    m[gridH-2][2]=2;
+    // Stairs back to bedroom
+    m[1][gridW-3]=2;
+  })();
+
+  // Outside layout
+  (function(){
+    const m = maps[MAP_OUTSIDE];
+    // edges are solid
+    for(let y=0;y<gridH;y++){ for(let x=0;x<gridW;x++){
+      if(x===0||y===0||x===gridW-1||y===gridH-1) m[y][x]=1;
+    }}
+    // Path
+    // Trees/buildings blocks
+    for(let y=1;y<gridH-1;y++){
+      m[y][3]=1; m[y][4]=1;
+    }
+    // Open a path corridor
+    for(let y=2;y<gridH-2;y++){
+      m[y][3]=0; m[y][4]=0;
+    }
+    // House entrance door (back in)
+    m[gridH-2][2]=2;
+    // Decorative pond block
+    for(let y=3;y<=6;y++) for(let x=10;x<=13;x++) m[y][x]=1;
+  })();
+
+  // NPCs and interactables
+  const npc = {
+    mom: { map: MAP_DOWNSTAIRS, x: 7, y: 8, color: '#ffd166', name: 'Mom' },
+    note: { map: MAP_DOWNSTAIRS, x: 9, y: 2, color: '#7cf0c7', name: 'Note' },
+    crates: [
+      { id:'Emberling', map: MAP_DOWNSTAIRS, x: 11, y: 4, color:'#ff6b6b', desc:'A bold spark-creature that loves warm places.' },
+      { id:'Sproutle', map: MAP_DOWNSTAIRS, x: 11, y: 6, color:'#7cf0c7', desc:'A calm leaf-creature that grows with care.' },
+      { id:'Bubblefin', map: MAP_DOWNSTAIRS, x: 11, y: 8, color:'#4dabf7', desc:'A playful water-creature that never sits still.' },
+    ]
+  };
+
+  // Player
+  const player = {
+    map: MAP_BEDROOM,
+    x: 8,
+    y: 8,
+    dir: 'down',
+    speed: 6,
+    hasStarter: false,
+    starter: null,
+    flags: {
+      intro: false,
+      talkedMom: false,
+      readNote: false,
+      choseStarter: false,
+      steppedOutside: false,
+    }
+  };
+
+  // Dialog / UI
+  const ui = {
+    mode: 'dialog', // dialog | choose | none | end
+    dialogQueue: [],
+    dialogText: '',
+    dialogSpeaker: '',
+    chooseIndex: 0,
+    lockMovement: true,
+  };
+
+  function queueDialog(lines, speaker=''){
+    for(const t of lines){ ui.dialogQueue.push({t, speaker}); }
+    if(!ui.dialogText) popDialog();
+    ui.mode = 'dialog';
+    ui.lockMovement = true;
+  }
+
+  function popDialog(){
+    const next = ui.dialogQueue.shift();
+    if(!next){ ui.dialogText=''; ui.dialogSpeaker=''; ui.lockMovement = false; ui.mode='none'; return; }
+    ui.dialogText = next.t;
+    ui.dialogSpeaker = next.speaker || '';
+  }
+
+  function begin(){
+    queueDialog([
+      "...Beep-beep...",
+      "You wake up to a note sliding under your door.",
+      "Mom: 'Good morning! Come downstairs when you're ready.'",
+      "(Use ↑↓←→ to move. Press Z for A.)"
+    ], '');
+    player.flags.intro = true;
+  }
+
+  // Interactions
+  function facingTile(){
+    const d = player.dir;
+    let fx=player.x, fy=player.y;
+    if(d==='up') fy--; else if(d==='down') fy++; else if(d==='left') fx--; else fx++;
+    return {x:fx,y:fy};
+  }
+
+  function canWalkTo(mapId, x, y){
+    if(x<0||y<0||x>=gridW||y>=gridH) return false;
+    const cell = maps[mapId][y][x];
+    if(cell===1) return false;
+    // block by NPC
+    if(mapId===npc.mom.map && x===npc.mom.x && y===npc.mom.y) return false;
+    return true;
+  }
+
+  function tryDoor(){
+    const cell = maps[player.map][player.y][player.x];
+    // doors are on tiles you step onto (cell==2)
+    if(cell!==2) return false;
+
+    if(player.map===MAP_BEDROOM){
+      // To downstairs
+      player.map = MAP_DOWNSTAIRS;
+      player.x = gridW-4;
+      player.y = 2;
+      player.dir = 'down';
+      if(!player.flags.talkedMom){
+        queueDialog([
+          "Downstairs smells like breakfast.",
+          "Mom is waiting near the living room.",
+          "(Talk to her with A when facing her.)"
+        ]);
+      }
+      return true;
+    }
+    if(player.map===MAP_DOWNSTAIRS){
+      // Which door?
+      if(player.x===2 && player.y===gridH-2){
+        // front door to outside - only after starter chosen
+        if(!player.flags.choseStarter){
+          queueDialog([
+            "Mom: 'Hold on—your mentor left something important for you.'",
+            "" + (player.flags.readNote?"Pick one of the three crates by the wall.":"Check the note on the counter first.")
+          ], 'Mom');
+          return true;
+        }
+        player.map = MAP_OUTSIDE;
+        player.x = 2;
+        player.y = gridH-3;
+        player.dir = 'up';
+        if(!player.flags.steppedOutside){
+          player.flags.steppedOutside = true;
+          queueDialog([
+            `You step outside with ${player.starter} at your side.`,
+            "The road ahead is open...",
+            "(End of the 5-minute prologue.)"
+          ]);
+          ui.mode = 'end';
+        }
+        return true;
+      }
+      if(player.x===gridW-3 && player.y===1){
+        // stairs back to bedroom
+        player.map = MAP_BEDROOM;
+        player.x = gridW-3;
+        player.y = gridH-3;
+        player.dir = 'up';
+        return true;
+      }
+    }
+    if(player.map===MAP_OUTSIDE){
+      if(player.x===2 && player.y===gridH-2){
+        // back into house
+        player.map = MAP_DOWNSTAIRS;
+        player.x = 2;
+        player.y = gridH-3;
+        player.dir = 'up';
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function interact(){
+    if(ui.mode==='dialog') return; // A advances dialog only
+
+    const {x:fx,y:fy} = facingTile();
+    if(player.map===npc.mom.map && fx===npc.mom.x && fy===npc.mom.y){
+      if(!player.flags.talkedMom){
+        player.flags.talkedMom = true;
+        queueDialog([
+          "Mom: 'Your mentor, Dr. Alder, sent a message this morning.'",
+          "Mom: 'It says: “Choose a companion from the three travel crates.”'",
+          "Mom: 'But first, read the note on the counter so you understand why.'"
+        ], 'Mom');
+      } else {
+        queueDialog([
+          "Mom: 'The note explains everything. Then choose one crate.'",
+          player.flags.readNote ? "Mom: 'Ready when you are.'" : "Mom: 'It's on the counter, to the north.'"
+        ], 'Mom');
+      }
+      return;
+    }
+
+    if(player.map===npc.note.map && fx===npc.note.x && fy===npc.note.y){
+      player.flags.readNote = true;
+      queueDialog([
+        "Note: “Hi, young explorer—today is your first step.”",
+        "Note: “Pick one companion. Treat them kindly; they’ll grow strong with you.”",
+        "Note: “Once you’ve chosen, head out the front door and meet me on the path.”",
+        "(Now choose a crate by interacting with it.)"
+      ], 'Note');
+      return;
+    }
+
+    // Starter crates (interact when facing the crate tile cluster)
+    for(const c of npc.crates){
+      // Crates are a 2x1 solid block at x=12..13, and you stand at x=11 facing right
+      if(player.map===c.map && fx===12 && (fy===c.y || fy===c.y) && player.x===11 && player.y===c.y && player.dir==='right'){
+        if(!player.flags.readNote){
+          queueDialog(["A travel crate is sealed.","(Maybe read the note on the counter first.)"]);
+          return;
+        }
+        if(player.flags.choseStarter){
+          queueDialog([`The crate is empty. ${player.starter} is already with you.`]);
+          return;
+        }
+        ui.mode = 'choose';
+        ui.lockMovement = true;
+        ui.chooseIndex = npc.crates.findIndex(k=>k.id===c.id);
+        return;
+      }
+    }
+
+    // Generic interaction
+    queueDialog(["There's nothing to interact with here."]);
+  }
+
+  function chooseConfirm(){
+    const pick = npc.crates[ui.chooseIndex];
+    player.flags.choseStarter = true;
+    player.hasStarter = true;
+    player.starter = pick.id;
+    ui.mode = 'dialog';
+    queueDialog([
+      `You chose ${pick.id}!`,
+      `${pick.id}: "${pick.id==='Emberling'?'Em-ber!':pick.id==='Sproutle'?'Sprouu!':'Bub-fin!'}"`,
+      "Mom: 'All set. Go on—step outside when you're ready.'"
+    ]);
+  }
+
+  // Input
+  window.addEventListener('keydown', (e) => {
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','z','x','Z','X','Shift'].includes(e.key)) e.preventDefault();
+    keys.add(e.key);
+  }, {passive:false});
+  window.addEventListener('keyup', (e) => { keys.delete(e.key); }, {passive:true});
+
+  // On-screen buttons
+  document.querySelectorAll('button[data-btn]').forEach(btn => {
+    const k = btn.getAttribute('data-btn');
+    const down = () => {
+      if(k==='up') keys.add('ArrowUp');
+      if(k==='down') keys.add('ArrowDown');
+      if(k==='left') keys.add('ArrowLeft');
+      if(k==='right') keys.add('ArrowRight');
+      if(k==='a') keys.add('z');
+      if(k==='b') keys.add('x');
+    };
+    const up = () => {
+      if(k==='up') keys.delete('ArrowUp');
+      if(k==='down') keys.delete('ArrowDown');
+      if(k==='left') keys.delete('ArrowLeft');
+      if(k==='right') keys.delete('ArrowRight');
+      if(k==='a') keys.delete('z');
+      if(k==='b') keys.delete('x');
+    };
+    btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); down(); btn.setPointerCapture(e.pointerId); });
+    btn.addEventListener('pointerup', (e)=>{ e.preventDefault(); up(); });
+    btn.addEventListener('pointercancel', (e)=>{ up(); });
+    btn.addEventListener('pointerleave', (e)=>{ up(); });
+  });
+
+  // A/B semantics
+  function pressA(){
+    if(ui.mode==='dialog'){ popDialog(); return; }
+    if(ui.mode==='choose'){ chooseConfirm(); return; }
+    if(ui.mode==='end'){ /* ignore */ return; }
+    interact();
+  }
+  function pressB(){
+    if(ui.mode==='dialog'){
+      // allow quick close on last line? Keep classic: B advances too.
+      popDialog();
+      return;
+    }
+    if(ui.mode==='choose'){
+      ui.mode='none'; ui.lockMovement=false;
+      queueDialog(["You step back from the crates."]);
+      return;
+    }
+  }
+
+  // Movement cooldown
+  let moveAccum = 0;
+
+  function update(dt){
+    // Handle A/B
+    if(keys.has('z') || keys.has('Z')){ keys.delete('z'); keys.delete('Z'); pressA(); }
+    if(keys.has('x') || keys.has('X')){ keys.delete('x'); keys.delete('X'); pressB(); }
+
+    if(ui.lockMovement) return;
+
+    const fast = keys.has('Shift');
+    const stepTime = fast ? 0.09 : 0.14; // seconds per tile
+    moveAccum += dt;
+    if(moveAccum < stepTime) return;
+
+    let dx=0,dy=0;
+    if(keys.has('ArrowUp')){ dy=-1; player.dir='up'; }
+    else if(keys.has('ArrowDown')){ dy=1; player.dir='down'; }
+    else if(keys.has('ArrowLeft')){ dx=-1; player.dir='left'; }
+    else if(keys.has('ArrowRight')){ dx=1; player.dir='right'; }
+
+    if(dx===0 && dy===0) return;
+
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if(canWalkTo(player.map, nx, ny)){
+      player.x = nx; player.y = ny;
+      moveAccum = 0;
+      tryDoor();
+    } else {
+      moveAccum = stepTime * 0.65; // keep a bit of responsiveness
+    }
+  }
+
+  // Rendering
+  function drawTile(mapId, x, y, v){
+    const px=x*TILE, py=y*TILE;
+    if(v===1){
+      ctx.fillStyle = mapId===MAP_OUTSIDE ? '#1a2a2a' : '#1a213d';
+      ctx.fillRect(px,py,TILE,TILE);
+      // edge highlight
+      ctx.fillStyle = 'rgba(255,255,255,.04)';
+      ctx.fillRect(px,py,TILE,3);
+      ctx.fillRect(px,py,3,TILE);
+    } else if(v===2){
+      ctx.fillStyle = mapId===MAP_OUTSIDE ? '#3a2a1a' : '#3a2a1a';
+      ctx.fillRect(px,py,TILE,TILE);
+      ctx.fillStyle = 'rgba(255,255,255,.08)';
+      ctx.fillRect(px+6,py+6,TILE-12,TILE-12);
+    } else {
+      // floor
+      if(mapId===MAP_OUTSIDE){
+        ctx.fillStyle = (x+y)%2===0 ? '#0f2a18' : '#0d2415';
+      } else {
+        ctx.fillStyle = (x+y)%2===0 ? '#0e1731' : '#0c142b';
+      }
+      ctx.fillRect(px,py,TILE,TILE);
+    }
+  }
+
+  function drawMap(){
+    const m = maps[player.map];
+    for(let y=0;y<gridH;y++) for(let x=0;x<gridW;x++) drawTile(player.map,x,y,m[y][x]);
+
+    // Decor in bedroom/downstairs/outside
+    if(player.map===MAP_BEDROOM){
+      // window
+      ctx.fillStyle='rgba(124,240,199,.08)';
+      ctx.fillRect(7*TILE,1*TILE,2*TILE,1*TILE);
+      // bed accent
+      ctx.fillStyle='rgba(255,255,255,.07)';
+      ctx.fillRect(2*TILE,2*TILE,4*TILE,1*TILE);
+    }
+
+    if(player.map===MAP_DOWNSTAIRS){
+      // mom, note, crates
+      drawNPC(npc.mom);
+      drawNPC(npc.note);
+      for(const c of npc.crates){
+        // Show crate fronts
+        ctx.fillStyle = c.color;
+        ctx.fillRect(12*TILE,(c.y)*TILE,2*TILE,1*TILE);
+        ctx.fillStyle='rgba(0,0,0,.25)';
+        ctx.fillRect(12*TILE,(c.y)*TILE+22,2*TILE,10);
+      }
+      // counter highlight
+      ctx.fillStyle='rgba(255,255,255,.05)';
+      ctx.fillRect(2*TILE,2*TILE,5*TILE,1*TILE);
+    }
+
+    if(player.map===MAP_OUTSIDE){
+      // sky band
+      ctx.fillStyle='rgba(124,240,199,.06)';
+      ctx.fillRect(0,0,W,2*TILE);
+      // pond
+      ctx.fillStyle='rgba(77,171,247,.14)';
+      ctx.fillRect(10*TILE,3*TILE,4*TILE,4*TILE);
+      ctx.fillStyle='rgba(77,171,247,.22)';
+      ctx.fillRect(11*TILE,4*TILE,2*TILE,2*TILE);
+    }
+  }
+
+  function drawNPC(n){
+    if(n.map!==player.map) return;
+    const px=n.x*TILE, py=n.y*TILE;
+    ctx.fillStyle=n.color;
+    ctx.fillRect(px+8,py+6,16,20);
+    ctx.fillStyle='rgba(0,0,0,.25)';
+    ctx.fillRect(px+10,py+10,12,3);
+  }
+
+  function drawPlayer(){
+    const px = player.x*TILE;
+    const py = player.y*TILE;
+    ctx.fillStyle='#ffd6a5';
+    ctx.fillRect(px+8,py+6,16,20);
+    // direction indicator (hat)
+    ctx.fillStyle='rgba(124,240,199,.7)';
+    if(player.dir==='up') ctx.fillRect(px+12,py+4,8,4);
+    if(player.dir==='down') ctx.fillRect(px+12,py+26,8,4);
+    if(player.dir==='left') ctx.fillRect(px+4,py+14,4,8);
+    if(player.dir==='right') ctx.fillRect(px+24,py+14,4,8);
+
+    // Starter follows outside once chosen
+    if(player.hasStarter){
+      const off = {up:[0,1],down:[0,-1],left:[1,0],right:[-1,0]}[player.dir];
+      const sx = (player.x+off[0]) * TILE;
+      const sy = (player.y+off[1]) * TILE;
+      const col = player.starter==='Emberling'?'#ff6b6b':(player.starter==='Sproutle'?'#7cf0c7':'#4dabf7');
+      ctx.fillStyle=col;
+      ctx.fillRect(sx+10,sy+14,12,12);
+      ctx.fillStyle='rgba(0,0,0,.25)';
+      ctx.fillRect(sx+12,sy+18,8,3);
+    }
+  }
+
+  function drawDialog(){
+    // bottom dialog box
+    if(ui.mode==='none' && ui.dialogText==='') return;
+
+    const pad = 10;
+    const boxH = 110;
+    const y = H - boxH - 10;
+    ctx.fillStyle='rgba(15,22,48,.92)';
+    roundRect(ctx, 10, y, W-20, boxH, 16);
+    ctx.strokeStyle='rgba(255,255,255,.12)';
+    ctx.lineWidth=2;
+    roundRect(ctx, 10, y, W-20, boxH, 16, true);
+
+    // Speaker
+    ctx.fillStyle='rgba(124,240,199,.18)';
+    if(ui.dialogSpeaker){
+      roundRect(ctx, 22, y+14, 160, 28, 999);
+      ctx.fillStyle='#e7ecff';
+      ctx.font='bold 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+      ctx.fillText(ui.dialogSpeaker, 40, y+34);
+    }
+
+    // Text
+    ctx.fillStyle='#e7ecff';
+    ctx.font='14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+    const textX = 28;
+    const textY = y + (ui.dialogSpeaker ? 52 : 36);
+    wrapText(ctx, ui.dialogText, textX, textY, W-56, 18);
+
+    // Prompt arrow
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    if(ui.mode==='dialog' || ui.mode==='end'){
+      ctx.fillText('▶', W-40, y+boxH-24);
+    }
+
+    if(ui.mode==='choose'){
+      // overlay choice panel
+      const panelW = W-40;
+      const panelH = 170;
+      const px = 20;
+      const py = 20;
+      ctx.fillStyle='rgba(17,24,51,.92)';
+      roundRect(ctx, px, py, panelW, panelH, 16);
+      ctx.strokeStyle='rgba(255,255,255,.12)';
+      ctx.lineWidth=2;
+      roundRect(ctx, px, py, panelW, panelH, 16, true);
+
+      ctx.fillStyle='#e7ecff';
+      ctx.font='bold 16px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+      ctx.fillText('Choose your first companion', px+18, py+34);
+
+      const startY = py+58;
+      for(let i=0;i<npc.crates.length;i++){
+        const c = npc.crates[i];
+        const by = startY + i*36;
+        const isSel = i===ui.chooseIndex;
+        ctx.fillStyle = isSel ? 'rgba(124,240,199,.20)' : 'rgba(255,255,255,.05)';
+        roundRect(ctx, px+14, by, panelW-28, 30, 12);
+        ctx.fillStyle = c.color;
+        ctx.fillRect(px+24, by+7, 16, 16);
+        ctx.fillStyle = '#e7ecff';
+        ctx.font = (isSel?'bold ':'') + '14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+        ctx.fillText(c.id, px+48, by+20);
+      }
+
+      const sel = npc.crates[ui.chooseIndex];
+      ctx.fillStyle='rgba(255,255,255,.75)';
+      ctx.font='13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+      wrapText(ctx, sel.desc + '  (A=Pick, B=Back)', px+18, py+150, panelW-36, 16);
+    }
+  }
+
+  function wrapText(context, text, x, y, maxWidth, lineHeight){
+    const words = (text||'').split(' ');
+    let line = '';
+    let yy = y;
+    for(let n=0;n<words.length;n++){
+      const testLine = line + words[n] + ' ';
+      const metrics = context.measureText(testLine);
+      if(metrics.width > maxWidth && n>0){
+        context.fillText(line, x, yy);
+        line = words[n] + ' ';
+        yy += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    context.fillText(line, x, yy);
+  }
+
+  function roundRect(context, x, y, w, h, r, stroke=false){
+    const rr = Math.min(r, w/2, h/2);
+    context.beginPath();
+    context.moveTo(x+rr, y);
+    context.arcTo(x+w, y, x+w, y+h, rr);
+    context.arcTo(x+w, y+h, x, y+h, rr);
+    context.arcTo(x, y+h, x, y, rr);
+    context.arcTo(x, y, x+w, y, rr);
+    context.closePath();
+    if(stroke) context.stroke(); else context.fill();
+  }
+
+  // Choice navigation (during choose mode)
+  function updateChoiceNav(){
+    if(ui.mode!=='choose') return;
+    // Use arrow up/down to change selection, with simple debounce
+  }
+
+  // Debounce for menu movement
+  let menuCooldown = 0;
+
+  function updateUI(dt){
+    if(ui.mode==='choose'){
+      menuCooldown -= dt;
+      if(menuCooldown <= 0){
+        if(keys.has('ArrowUp')){ ui.chooseIndex = (ui.chooseIndex+ npc.crates.length-1)%npc.crates.length; menuCooldown=0.14; }
+        else if(keys.has('ArrowDown')){ ui.chooseIndex = (ui.chooseIndex+1)%npc.crates.length; menuCooldown=0.14; }
+      }
+    }
+  }
+
+  // Main loop
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.05, (now-last)/1000);
+    last = now;
+
+    updateUI(dt);
+    update(dt);
+
+    // clear
+    ctx.clearRect(0,0,W,H);
+
+    drawMap();
+    drawPlayer();
+
+    // small UI overlay top-left
+    ctx.fillStyle='rgba(0,0,0,.25)';
+    roundRect(ctx, 12, 12, 220, 42, 14);
+    ctx.fillStyle='#e7ecff';
+    ctx.font='bold 13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+    const loc = player.map===MAP_BEDROOM?'Bedroom':(player.map===MAP_DOWNSTAIRS?'Downstairs':'Outside');
+    ctx.fillText(loc, 26, 30);
+    ctx.fillStyle='rgba(255,255,255,.70)';
+    ctx.font='12px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial';
+    ctx.fillText(player.starter?`Companion: ${player.starter}`:'Companion: (none)', 26, 48);
+
+    drawDialog();
+
+    requestAnimationFrame(loop);
+  }
+
+  // Start
+  begin();
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
